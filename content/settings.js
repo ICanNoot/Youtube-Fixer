@@ -21,10 +21,11 @@
    */
   function resetAndRescan() {
     document.querySelectorAll(`[${YTF.FILTERED_ATTR}]`).forEach((el) => {
-      // Restore .with-chipbar class on frosted-glass if we removed it
-      if (el.dataset.ytfChipbarRemoved) {
-        el.classList.add("with-chipbar");
-        delete el.dataset.ytfChipbarRemoved;
+      // Remove frosted-glass height override if we applied it
+      if (el.dataset.ytfHeightOverride) {
+        el.style.removeProperty("height");
+        el.style.removeProperty("overflow");
+        delete el.dataset.ytfHeightOverride;
       }
       el.removeAttribute(YTF.FILTERED_ATTR);
       el.classList.remove("ytf-hidden");

@@ -191,10 +191,11 @@
    * Hide the topic chips bar on homepage and search pages.
    *
    * Homepage: `div#frosted-glass.with-chipbar` is the frosted overlay behind
-   * the masthead. The `.with-chipbar` class adds extra height (112px) for the
-   * chip bar. Removing that class collapses it to masthead-only height while
-   * keeping the sticky header background intact. The chip bar elements inside
-   * `ytd-rich-grid-renderer > div#header` are hidden by the general fallback.
+   * the masthead. The `.with-chipbar` class sets height to 112px (56px masthead
+   * + 56px chip bar) and provides the frosted background. We can't remove the
+   * class (loses the background) or hide the element (loses the sticky header).
+   * Instead we override its height to 56px so only the masthead portion shows,
+   * keeping the frosted background intact while chopping the chip bar space.
    *
    * Search page: Chips live inside `ytd-search-sub-menu-renderer`. We hide
    * the sub-menu renderer to collapse the space.
@@ -202,15 +203,15 @@
   function filterTopicChips() {
     if (!settings.hideTopicChips) return;
 
-    // Homepage: remove .with-chipbar from the frosted glass overlay so it
-    // reverts to its default masthead-only height. Do NOT hide the element
-    // itself — it provides the sticky header background behind the search bar.
-    const frostedGlass = document.querySelector("div#frosted-glass.with-chipbar");
+    // Homepage: override frosted-glass height to masthead-only (56px).
+    // Keep .with-chipbar intact so the frosted background remains.
+    const frostedGlass = document.querySelector("div#frosted-glass");
     if (frostedGlass && !frostedGlass.hasAttribute(FILTERED_ATTR)) {
-      frostedGlass.classList.remove("with-chipbar");
+      frostedGlass.style.setProperty("height", "56px", "important");
+      frostedGlass.style.setProperty("overflow", "hidden");
       frostedGlass.setAttribute(FILTERED_ATTR, "1");
-      frostedGlass.dataset.ytfChipbarRemoved = "1";
-      log("Hiding topic chips: removed with-chipbar from frosted-glass");
+      frostedGlass.dataset.ytfHeightOverride = "1";
+      log("Hiding topic chips: overrode frosted-glass height to 56px");
     }
 
     // Search page: hide chip clouds and their search sub-menu parent

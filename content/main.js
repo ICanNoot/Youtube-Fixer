@@ -18,9 +18,10 @@
     recordCurrentVideo();
 
     document.querySelectorAll(`[${FILTERED_ATTR}]`).forEach((el) => {
-      if (el.dataset.ytfChipbarRemoved) {
-        el.classList.add("with-chipbar");
-        delete el.dataset.ytfChipbarRemoved;
+      if (el.dataset.ytfHeightOverride) {
+        el.style.removeProperty("height");
+        el.style.removeProperty("overflow");
+        delete el.dataset.ytfHeightOverride;
       }
       el.removeAttribute(FILTERED_ATTR);
       el.classList.remove("ytf-hidden");
