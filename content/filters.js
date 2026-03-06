@@ -190,30 +190,21 @@
   /**
    * Hide the topic chips bar on homepage and search pages.
    *
-   * Homepage: The chip bar sits inside `ytd-rich-grid-renderer > div#header`.
-   * Additionally, `div#frosted-glass.with-chipbar` is a frosted overlay
-   * outside the grid (height: 112px, dark background) that persists even
-   * when the chip bar is hidden. We remove its `.with-chipbar` class so it
-   * collapses to its default non-chipbar size.
+   * Homepage: `div#frosted-glass.with-chipbar` is the frosted overlay behind
+   * the masthead. The `.with-chipbar` class adds extra height (112px) for the
+   * chip bar. Removing that class collapses it to masthead-only height while
+   * keeping the sticky header background intact. The chip bar elements inside
+   * `ytd-rich-grid-renderer > div#header` are hidden by the general fallback.
    *
    * Search page: Chips live inside `ytd-search-sub-menu-renderer`. We hide
-   * the chip cloud and its parent sub-menu renderer to collapse the space.
+   * the sub-menu renderer to collapse the space.
    */
   function filterTopicChips() {
     if (!settings.hideTopicChips) return;
 
-    // Homepage: hide the #header container inside ytd-rich-grid-renderer
-    const gridHeaders = document.querySelectorAll(
-      "ytd-rich-grid-renderer > #header"
-    );
-    for (const header of gridHeaders) {
-      if (header.hasAttribute(FILTERED_ATTR)) continue;
-      header.setAttribute(FILTERED_ATTR, "1");
-      header.classList.add("ytf-hidden");
-      log("Hiding topic chips: homepage header container");
-    }
-
-    // Homepage: collapse the frosted glass overlay that creates the dark bar
+    // Homepage: remove .with-chipbar from the frosted glass overlay so it
+    // reverts to its default masthead-only height. Do NOT hide the element
+    // itself — it provides the sticky header background behind the search bar.
     const frostedGlass = document.querySelector("div#frosted-glass.with-chipbar");
     if (frostedGlass && !frostedGlass.hasAttribute(FILTERED_ATTR)) {
       frostedGlass.classList.remove("with-chipbar");
