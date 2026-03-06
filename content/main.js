@@ -18,6 +18,10 @@
     recordCurrentVideo();
 
     document.querySelectorAll(`[${FILTERED_ATTR}]`).forEach((el) => {
+      if (el.dataset.ytfChipbarRemoved) {
+        el.classList.add("with-chipbar");
+        delete el.dataset.ytfChipbarRemoved;
+      }
       el.removeAttribute(FILTERED_ATTR);
       el.classList.remove("ytf-hidden");
     });

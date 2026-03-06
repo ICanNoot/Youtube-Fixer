@@ -191,8 +191,10 @@
    * Hide the topic chips bar on homepage and search pages.
    *
    * Homepage: The chip bar sits inside `ytd-rich-grid-renderer > div#header`.
-   * Hiding just the chip bar leaves the header container visible (dark
-   * gradient bar with padding). We hide the header container itself.
+   * Additionally, `div#frosted-glass.with-chipbar` is a frosted overlay
+   * outside the grid (height: 112px, dark background) that persists even
+   * when the chip bar is hidden. We remove its `.with-chipbar` class so it
+   * collapses to its default non-chipbar size.
    *
    * Search page: Chips live inside `ytd-search-sub-menu-renderer`. We hide
    * the chip cloud and its parent sub-menu renderer to collapse the space.
@@ -209,6 +211,15 @@
       header.setAttribute(FILTERED_ATTR, "1");
       header.classList.add("ytf-hidden");
       log("Hiding topic chips: homepage header container");
+    }
+
+    // Homepage: collapse the frosted glass overlay that creates the dark bar
+    const frostedGlass = document.querySelector("div#frosted-glass.with-chipbar");
+    if (frostedGlass && !frostedGlass.hasAttribute(FILTERED_ATTR)) {
+      frostedGlass.classList.remove("with-chipbar");
+      frostedGlass.setAttribute(FILTERED_ATTR, "1");
+      frostedGlass.dataset.ytfChipbarRemoved = "1";
+      log("Hiding topic chips: removed with-chipbar from frosted-glass");
     }
 
     // Search page: hide chip clouds and their search sub-menu parent

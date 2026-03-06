@@ -21,6 +21,11 @@
    */
   function resetAndRescan() {
     document.querySelectorAll(`[${YTF.FILTERED_ATTR}]`).forEach((el) => {
+      // Restore .with-chipbar class on frosted-glass if we removed it
+      if (el.dataset.ytfChipbarRemoved) {
+        el.classList.add("with-chipbar");
+        delete el.dataset.ytfChipbarRemoved;
+      }
       el.removeAttribute(YTF.FILTERED_ATTR);
       el.classList.remove("ytf-hidden");
     });
