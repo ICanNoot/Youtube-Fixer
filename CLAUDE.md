@@ -84,9 +84,9 @@ Manifest V3 Firefox extension that filters livestreams, low-view videos, Shorts,
 - On navigation: records current video ID, clears all filter marks, cleans up autoplay state, rescans after 500ms delay
 
 ## Known issues / incomplete items
-- **Shorts sidebar button**: FIXED — `filterShortsNav()` now also finds `a[href="/shorts"]` and walks up to the nearest container on Firefox.
-- **Shorts in search results**: May not be caught on Firefox if the shelf elements differ from Chrome.
-- **Topic chips bar**: The chips themselves are hidden but the background container may still be visible, leaving empty space at the top of the page. Need to target the outermost wrapper element.
+- **Shorts sidebar button**: FIXED — `filterShortsNav()` now matches sidebar entries by text content ("Shorts") instead of href, since the Shorts link uses `a#endpoint.yt-simple-endpoint` with no href attribute.
+- **Shorts in search results**: FIXED — `ytd-reel-shelf-renderer` (dedicated Shorts shelf) is unconditionally hidden when `hideShorts` is enabled. Individual Shorts in `ytd-video-renderer` are caught by `isShort()` via `/shorts/` href check. Search pages on Firefox use `ytd-` elements unlike the homepage.
+- **Topic chips bar**: FIXED — Homepage: hides `ytd-rich-grid-renderer > div#header` (the container that holds the chip bar and creates the dark gradient). Search page: hides `ytd-search-sub-menu-renderer` which contains the chip cloud. Both respect `hideTopicChips` setting.
 
 ## Files
 

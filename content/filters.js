@@ -118,12 +118,24 @@
   /**
    * Scan for shelf/section containers and hide entire shelves whose
    * heading matches a filtered category (e.g. "YouTube Playables").
+   *
+   * Also unconditionally hides `ytd-reel-shelf-renderer` when Shorts
+   * filtering is enabled — this element is exclusively a Shorts shelf
+   * (on search pages and elsewhere) regardless of heading text.
    */
   function scanAndFilterShelves() {
     const shelves = document.querySelectorAll(SHELF_SELECTORS);
 
     for (const shelf of shelves) {
       if (shelf.hasAttribute(FILTERED_ATTR)) continue;
+
+      // ytd-reel-shelf-renderer is always a Shorts shelf — hide directly
+      if (settings.hideShorts && shelf.tagName === "YTD-REEL-SHELF-RENDERER") {
+        shelf.setAttribute(FILTERED_ATTR, "1");
+        shelf.classList.add("ytf-hidden");
+        log("Hiding shelf: Shorts (reel-shelf-renderer)");
+        continue;
+      }
 
       const heading = shelf.querySelector(
         "#title, #title-text, h2, " +
@@ -154,49 +166,63 @@
   /**
    * Hide the Shorts sidebar entry in the guide panel and mini-guide.
    *
-   * BUG FIX: The original code only targeted `ytd-guide-entry-renderer` and
-   * `ytd-mini-guide-entry-renderer`, which don't exist on Firefox. Now also
-   * finds `a[href="/shorts"]` and walks up to hide the nearest list-item
-   * parent, which works on both Firefox and Chrome.
+   * The Shorts link in the sidebar uses `a#endpoint.yt-simple-endpoint` with
+   * NO href attribute, so we match by text content instead. Query all guide
+   * entry renderers and hide any whose text reads "Shorts".
    */
   function filterShortsNav() {
     if (!settings.hideShorts) return;
 
-    // Chrome: full guide entries
     const guideEntries = document.querySelectorAll(
       "ytd-guide-entry-renderer, ytd-mini-guide-entry-renderer"
     );
     for (const entry of guideEntries) {
       if (entry.hasAttribute(FILTERED_ATTR)) continue;
-      const link = entry.querySelector("a[href]");
-      if (link && /\/shorts\b/.test(link.getAttribute("href"))) {
+      const text = entry.textContent.trim();
+      if (text === "Shorts") {
         entry.setAttribute(FILTERED_ATTR, "1");
         entry.classList.add("ytf-hidden");
-        log("Hiding sidebar entry: Shorts (Chrome)");
+        log("Hiding sidebar entry: Shorts");
       }
-    }
-
-    // Firefox / new layout: find the Shorts link and walk up to its container
-    const shortsLinks = document.querySelectorAll('a[href="/shorts"]');
-    for (const link of shortsLinks) {
-      // Walk up to the nearest guide-like parent (renderer or list item)
-      const container =
-        link.closest("ytd-guide-entry-renderer, ytd-mini-guide-entry-renderer") ||
-        link.closest("[role='listitem']") ||
-        link.parentElement;
-      if (!container || container.hasAttribute(FILTERED_ATTR)) continue;
-      container.setAttribute(FILTERED_ATTR, "1");
-      container.classList.add("ytf-hidden");
-      log("Hiding sidebar entry: Shorts (Firefox/new layout)");
     }
   }
 
   /**
-   * Hide the topic chips bar at the top of the homepage feed.
+   * Hide the topic chips bar on homepage and search pages.
+   *
+   * Homepage: The chip bar sits inside `ytd-rich-grid-renderer > div#header`.
+   * Hiding just the chip bar leaves the header container visible (dark
+   * gradient bar with padding). We hide the header container itself.
+   *
+   * Search page: Chips live inside `ytd-search-sub-menu-renderer`. We hide
+   * the chip cloud and its parent sub-menu renderer to collapse the space.
    */
   function filterTopicChips() {
     if (!settings.hideTopicChips) return;
 
+    // Homepage: hide the #header container inside ytd-rich-grid-renderer
+    const gridHeaders = document.querySelectorAll(
+      "ytd-rich-grid-renderer > #header"
+    );
+    for (const header of gridHeaders) {
+      if (header.hasAttribute(FILTERED_ATTR)) continue;
+      header.setAttribute(FILTERED_ATTR, "1");
+      header.classList.add("ytf-hidden");
+      log("Hiding topic chips: homepage header container");
+    }
+
+    // Search page: hide chip clouds and their search sub-menu parent
+    const searchSubMenus = document.querySelectorAll(
+      "ytd-search-sub-menu-renderer"
+    );
+    for (const menu of searchSubMenus) {
+      if (menu.hasAttribute(FILTERED_ATTR)) continue;
+      menu.setAttribute(FILTERED_ATTR, "1");
+      menu.classList.add("ytf-hidden");
+      log("Hiding topic chips: search sub-menu");
+    }
+
+    // General fallback: hide chip bar elements directly
     const chipBars = document.querySelectorAll(
       "ytd-feed-filter-chip-bar-renderer, yt-chip-cloud-renderer, " +
       "yt-chip-cloud-view-model, iron-selector#chips"
