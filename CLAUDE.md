@@ -39,7 +39,7 @@ Manifest V3 Firefox extension that filters livestreams, low-view videos, Shorts,
 ## Architecture
 
 ### Settings system
-- Defaults defined in both `popup.js` and `content.js` as `SETTINGS_DEFAULTS`
+- Defaults defined in both `popup.js` and `content/shared.js` as `SETTINGS_DEFAULTS`
 - Stored in `browser.storage.local`, loaded on init
 - Popup sends `ytf-settings-update` messages to content script for live updates
 - On settings change, all `data-ytf-filtered` attributes are cleared and page is rescanned
@@ -84,12 +84,22 @@ Manifest V3 Firefox extension that filters livestreams, low-view videos, Shorts,
 - On navigation: records current video ID, clears all filter marks, cleans up autoplay state, rescans after 500ms delay
 
 ## Known issues / incomplete items
-- **Shorts sidebar button**: `filterShortsNav()` targets `ytd-guide-entry-renderer` and `ytd-mini-guide-entry-renderer` which may not exist on Firefox. Needs to find the `a[href="/shorts"]` element and walk up to the correct parent. May need CSS fallback approach.
+- **Shorts sidebar button**: FIXED — `filterShortsNav()` now also finds `a[href="/shorts"]` and walks up to the nearest container on Firefox.
 - **Shorts in search results**: May not be caught on Firefox if the shelf elements differ from Chrome.
 - **Topic chips bar**: The chips themselves are hidden but the background container may still be visible, leaving empty space at the top of the page. Need to target the outermost wrapper element.
 
 ## Files
-- `content.js` — main filtering logic (1313 lines), autoplay interception, settings listener, shelf/nav/chip filtering
+
+### Content scripts (loaded in order via manifest.json, share `window.YTF` namespace)
+- `content/shared.js` — namespace setup, constants, selectors, settings defaults
+- `content/utils.js` — logging, view count parsing, video ID extraction
+- `content/settings.js` — settings load/save, popup message listener, reset-and-rescan
+- `content/detectors.js` — video type detection (livestream, shorts, mix, playable, members-only), view count extraction, title/channel/meta helpers
+- `content/filters.js` — `shouldHide()` decision logic, `scanAndFilter()`, shelf/nav/chip filtering
+- `content/autoplay.js` — autoplay interception, YouTube toggle control, countdown overlay, end card updates, sidebar alternative search, video history
+- `content/main.js` — initialization, MutationObserver, periodic rescan, SPA navigation handling
+
+### Other
 - `manifest.json` — Manifest V3 with gecko settings, storage permission, popup action
 - `styles.css` — `.ytf-hidden` and `.ytf-countdown-overlay` styles
 - `popup.html` — settings popup UI with toggle switches and number inputs

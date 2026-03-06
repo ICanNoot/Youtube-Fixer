@@ -15,7 +15,15 @@
   "content_scripts": [
     {
       "matches": ["*://*.youtube.com/*"],
-      "js": ["content.js"],
+      "js": [
+        "content/shared.js",
+        "content/utils.js",
+        "content/settings.js",
+        "content/detectors.js",
+        "content/filters.js",
+        "content/autoplay.js",
+        "content/main.js"
+      ],
       "css": ["styles.css"],
       "run_at": "document_idle"
     }
