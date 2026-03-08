@@ -51,20 +51,27 @@
     }, DEBOUNCE_MS);
   }
 
-  const observer = new MutationObserver(() => {
-    debouncedScan();
+  const observer = new MutationObserver((mutations) => {
+    // Only rescan when new nodes are added to the DOM. Attribute and text
+    // changes on existing elements don't introduce new videos to filter.
+    for (let i = 0; i < mutations.length; i++) {
+      if (mutations[i].addedNodes.length > 0) {
+        debouncedScan();
+        return;
+      }
+    }
   });
 
   // ---- Periodic re-scan for lazily loaded metadata ----
-  // BUG FIX: Uses VIDEO_SELECTOR_LIST array instead of fragile string split.
+
+  // Pre-built selector for unresolved video elements (avoids rebuilding every tick)
+  const UNRESOLVED_SELECTOR = VIDEO_SELECTOR_LIST
+    .map((s) => `${s}:not([${FILTERED_ATTR}])`)
+    .join(", ");
 
   function startPeriodicRescan() {
     setInterval(() => {
-      const unresolvedSelector = VIDEO_SELECTOR_LIST
-        .map((s) => `${s}:not([${FILTERED_ATTR}])`)
-        .join(", ");
-      const unresolved = document.querySelectorAll(unresolvedSelector);
-      if (unresolved.length > 0) {
+      if (document.querySelector(UNRESOLVED_SELECTOR)) {
         scanAndFilter();
       }
     }, RESCAN_INTERVAL_MS);

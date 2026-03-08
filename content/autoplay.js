@@ -476,9 +476,12 @@
       return;
     }
 
+    let autoplayDebounceTimer = null;
+
     autoplayContainerObserver = new MutationObserver((mutations) => {
       if (isUpdatingEndCard) return;
 
+      let shouldCheck = false;
       for (const mutation of mutations) {
         if (
           mutation.type === "attributes" &&
@@ -487,16 +490,23 @@
             mutation.attributeName === "class")
         ) {
           if (container.clientHeight > 0) {
-            log("Autoplay: container became visible (attribute change)");
-            checkAutoplayAndSkip();
-            return;
+            shouldCheck = true;
+            break;
           }
         }
         if (mutation.type === "childList" && container.clientHeight > 0) {
-          log("Autoplay: container content changed while visible");
-          checkAutoplayAndSkip();
-          return;
+          shouldCheck = true;
+          break;
         }
+      }
+
+      if (shouldCheck) {
+        if (autoplayDebounceTimer) clearTimeout(autoplayDebounceTimer);
+        autoplayDebounceTimer = setTimeout(() => {
+          autoplayDebounceTimer = null;
+          log("Autoplay: container mutation (debounced)");
+          checkAutoplayAndSkip();
+        }, 200);
       }
     });
 

@@ -7,6 +7,40 @@
   const { log, parseViewCount, extractViewString, BADGE_TEXT_SELECTORS } = YTF;
 
   /**
+   * Collect badge and overlay texts from a video element once, so multiple
+   * detectors can reuse them without redundant DOM queries.
+   */
+  function collectBadgeInfo(el) {
+    const badgeTexts = [];
+    const overlayTexts = [];
+    const overlayStyles = [];
+
+    const badges = el.querySelectorAll(BADGE_TEXT_SELECTORS);
+    for (const bt of badges) {
+      badgeTexts.push((bt.textContent || "").trim().toUpperCase());
+    }
+
+    const overlays = el.querySelectorAll(
+      "ytd-thumbnail-overlay-time-status-renderer"
+    );
+    for (const overlay of overlays) {
+      const style = overlay.getAttribute("overlay-style");
+      if (style) overlayStyles.push(style);
+      overlayTexts.push((overlay.textContent || "").trim().toUpperCase());
+    }
+
+    const chromeBadges = el.querySelectorAll(
+      "ytd-badge-supported-renderer, .badge-style-type-live-now, .badge-style-type-live-now-alternate"
+    );
+    const chromeBadgeTexts = [];
+    for (const badge of chromeBadges) {
+      chromeBadgeTexts.push((badge.textContent || "").trim().toUpperCase());
+    }
+
+    return { badgeTexts, overlayTexts, overlayStyles, chromeBadgeTexts };
+  }
+
+  /**
    * Check whether a video element is a livestream.
    *
    * BUG FIX: Removed CSS `[aria-label*="live" i]` selector — the `i` flag
@@ -17,36 +51,30 @@
    * element's textContent, which could false-positive on unrelated text.
    * Now scoped to metadata-specific elements only.
    */
-  function isLiveStream(el) {
+  function isLiveStream(el, info) {
     // 1. Chrome overlay with style="LIVE"
-    const overlays = el.querySelectorAll(
-      "ytd-thumbnail-overlay-time-status-renderer"
-    );
-    for (const overlay of overlays) {
-      const style = overlay.getAttribute("overlay-style");
+    for (const style of info.overlayStyles) {
       if (style === "LIVE") return true;
-      const txt = (overlay.textContent || "").trim().toUpperCase();
+    }
+    for (const txt of info.overlayTexts) {
       if (txt === "LIVE" || txt === "LIVE NOW") return true;
     }
 
     // 2. Chrome badge elements
-    const badges = el.querySelectorAll(
-      "ytd-badge-supported-renderer, .badge-style-type-live-now, .badge-style-type-live-now-alternate"
-    );
-    for (const badge of badges) {
-      const txt = (badge.textContent || "").trim().toUpperCase();
+    for (const txt of info.chromeBadgeTexts) {
       if (txt === "LIVE" || txt === "LIVE NOW") return true;
     }
 
     // 3. Firefox / new layout badge text
-    const badgeTexts = el.querySelectorAll(BADGE_TEXT_SELECTORS);
-    for (const bt of badgeTexts) {
-      const txt = (bt.textContent || "").trim().toUpperCase();
+    for (const txt of info.badgeTexts) {
       if (txt === "LIVE" || txt === "LIVE NOW") return true;
     }
 
-    // 4. Aria-label check (JS-based, replaces buggy CSS `i` flag selector)
-    const labeledEls = el.querySelectorAll("[aria-label]");
+    // 4. Aria-label check on thumbnail overlays and title (scoped to avoid
+    //    matching unrelated aria-labels on buttons/links throughout the card)
+    const labeledEls = el.querySelectorAll(
+      "ytd-thumbnail-overlay-time-status-renderer[aria-label], #video-title[aria-label]"
+    );
     for (const labeled of labeledEls) {
       const ariaLabel = labeled.getAttribute("aria-label") || "";
       if (/\blive\b/i.test(ariaLabel)) return true;
@@ -116,26 +144,13 @@
       if (vs) return parseViewCount(vs);
     }
 
-    const allSpans = el.querySelectorAll("span");
-    for (const span of allSpans) {
-      const txt = (span.textContent || "").trim();
-      if (/views?$/i.test(txt)) {
-        const count = parseViewCount(txt);
-        if (!isNaN(count)) return count;
-      }
-    }
-
-    const fullText = el.textContent || "";
-    const vs = extractViewString(fullText);
-    if (vs) return parseViewCount(vs);
-
     return NaN;
   }
 
   /**
    * Check whether a video element is a YouTube Short.
    */
-  function isShort(el) {
+  function isShort(el, info) {
     if (el.tagName === "YTD-REEL-ITEM-RENDERER") return true;
 
     const anchors = el.querySelectorAll("a[href]");
@@ -143,19 +158,14 @@
       if (a.href && a.href.includes("/shorts/")) return true;
     }
 
-    const overlays = el.querySelectorAll(
-      "ytd-thumbnail-overlay-time-status-renderer"
-    );
-    for (const overlay of overlays) {
-      const style = overlay.getAttribute("overlay-style");
+    for (const style of info.overlayStyles) {
       if (style === "SHORTS") return true;
-      const txt = (overlay.textContent || "").trim().toUpperCase();
+    }
+    for (const txt of info.overlayTexts) {
       if (txt === "SHORTS") return true;
     }
 
-    const badgeTexts = el.querySelectorAll(BADGE_TEXT_SELECTORS);
-    for (const bt of badgeTexts) {
-      const txt = (bt.textContent || "").trim().toUpperCase();
+    for (const txt of info.badgeTexts) {
       if (txt === "SHORTS") return true;
     }
 
@@ -165,7 +175,7 @@
   /**
    * Check whether a video element is a YouTube Mix.
    */
-  function isMix(el) {
+  function isMix(el, info) {
     if (el.tagName === "YTD-RADIO-RENDERER") return true;
 
     const anchors = el.querySelectorAll("a[href]");
@@ -178,17 +188,11 @@
     const title = getVideoTitle(el);
     if (/^Mix\s*[-–]/.test(title)) return true;
 
-    const overlays = el.querySelectorAll(
-      "ytd-thumbnail-overlay-time-status-renderer"
-    );
-    for (const overlay of overlays) {
-      const txt = (overlay.textContent || "").trim().toUpperCase();
+    for (const txt of info.overlayTexts) {
       if (txt === "MIX") return true;
     }
 
-    const badgeTexts = el.querySelectorAll(BADGE_TEXT_SELECTORS);
-    for (const bt of badgeTexts) {
-      const txt = (bt.textContent || "").trim().toUpperCase();
+    for (const txt of info.badgeTexts) {
       if (txt === "MIX") return true;
     }
 
@@ -198,25 +202,20 @@
   /**
    * Check whether a video element is a YouTube Playable.
    */
-  function isPlayable(el) {
+  function isPlayable(el, info) {
     const anchors = el.querySelectorAll("a[href]");
     for (const a of anchors) {
       if (a.href && a.href.includes("/playables/")) return true;
     }
 
-    const badgeTexts = el.querySelectorAll(
-      "ytd-badge-supported-renderer, " + BADGE_TEXT_SELECTORS
-    );
-    for (const bt of badgeTexts) {
-      const txt = (bt.textContent || "").trim().toUpperCase();
+    for (const txt of info.chromeBadgeTexts) {
+      if (txt === "PLAYABLE" || txt === "PLAY GAME") return true;
+    }
+    for (const txt of info.badgeTexts) {
       if (txt === "PLAYABLE" || txt === "PLAY GAME") return true;
     }
 
-    const overlays = el.querySelectorAll(
-      "ytd-thumbnail-overlay-time-status-renderer"
-    );
-    for (const overlay of overlays) {
-      const txt = (overlay.textContent || "").trim().toUpperCase();
+    for (const txt of info.overlayTexts) {
       if (txt === "PLAYABLE" || txt === "PLAY GAME") return true;
     }
 
@@ -226,12 +225,11 @@
   /**
    * Check whether a video element is members-only content.
    */
-  function isMembersOnly(el) {
-    const badgeTexts = el.querySelectorAll(
-      "ytd-badge-supported-renderer, " + BADGE_TEXT_SELECTORS
-    );
-    for (const bt of badgeTexts) {
-      const txt = (bt.textContent || "").trim().toUpperCase();
+  function isMembersOnly(el, info) {
+    for (const txt of info.chromeBadgeTexts) {
+      if (txt === "MEMBERS ONLY") return true;
+    }
+    for (const txt of info.badgeTexts) {
       if (txt === "MEMBERS ONLY") return true;
     }
 
@@ -241,11 +239,7 @@
       if (/members only/i.test(ariaLabel)) return true;
     }
 
-    const overlays = el.querySelectorAll(
-      "ytd-thumbnail-overlay-time-status-renderer"
-    );
-    for (const overlay of overlays) {
-      const txt = (overlay.textContent || "").trim().toUpperCase();
+    for (const txt of info.overlayTexts) {
       if (txt === "MEMBERS ONLY") return true;
     }
 
@@ -307,6 +301,7 @@
   }
 
   // Expose
+  YTF.collectBadgeInfo = collectBadgeInfo;
   YTF.isLiveStream = isLiveStream;
   YTF.getViewCount = getViewCount;
   YTF.isShort = isShort;

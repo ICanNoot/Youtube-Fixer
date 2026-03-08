@@ -7,7 +7,7 @@
   const {
     log, settings, FILTERED_ATTR,
     VIDEO_SELECTORS, YTD_CONTAINER_SELECTORS, SHELF_SELECTORS, SHELF_FILTERS,
-    isLiveStream, isShort, isMix, isPlayable, isMembersOnly,
+    collectBadgeInfo, isLiveStream, isShort, isMix, isPlayable, isMembersOnly,
     getViewCount, getVideoTitle,
   } = YTF;
 
@@ -16,23 +16,26 @@
    * Returns { hide: boolean, reason: string, indeterminate: boolean }
    */
   function shouldHide(el) {
-    if (settings.hideLivestreams && isLiveStream(el)) {
+    // Collect badge/overlay texts once — reused by all detectors below
+    const info = collectBadgeInfo(el);
+
+    if (settings.hideLivestreams && isLiveStream(el, info)) {
       return { hide: true, reason: "livestream", indeterminate: false };
     }
 
-    if (settings.hideShorts && isShort(el)) {
+    if (settings.hideShorts && isShort(el, info)) {
       return { hide: true, reason: "short", indeterminate: false };
     }
 
-    if (settings.hideMixes && isMix(el)) {
+    if (settings.hideMixes && isMix(el, info)) {
       return { hide: true, reason: "mix", indeterminate: false };
     }
 
-    if (settings.hidePlayables && isPlayable(el)) {
+    if (settings.hidePlayables && isPlayable(el, info)) {
       return { hide: true, reason: "playable", indeterminate: false };
     }
 
-    if (settings.hideMembersOnly && isMembersOnly(el)) {
+    if (settings.hideMembersOnly && isMembersOnly(el, info)) {
       return { hide: true, reason: "members-only", indeterminate: false };
     }
 
