@@ -43,6 +43,16 @@
       const views = getViewCount(el);
 
       if (isNaN(views)) {
+        // Distinguish "metadata not loaded yet" from "no view count shown".
+        // If the element has metadata text (channel, date, etc.) but no
+        // parseable view count, it won't resolve on future rescans — mark
+        // as pass so it's available as an autoplay alternative.
+        const metaEl = el.querySelector(
+          "yt-content-metadata-view-model, #metadata-line, #metadata, ytd-video-meta-block"
+        );
+        if (metaEl && metaEl.textContent.trim()) {
+          return { hide: false, reason: "", indeterminate: false };
+        }
         return { hide: false, reason: "", indeterminate: true };
       }
 
